@@ -11,14 +11,54 @@ logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 
+async def init_db():
+    logger.info("Initializing database.")
+    try:
+        conn = await asyncpg.connect(
+            user="username", password="password", database="dbname", host="timescaledb"
+        )
+        await conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS heart_rate (
+                time TIMESTAMP NOT NULL, 
+                rate INT NOT NULL
+            );
+        """
+        )
+        await conn.execute(
+            """
+            SELECT create_hypertable('heart_rate', 'time');
+        """
+        )
+        await conn.close()
+    except Exception as e:
+        print("PostgreSQL Error: %s", str(e))
+
+
+async def send_to_db(time, data):
+    logger.info("Uploading to database.")
+    conn = await asyncpg.connect(
+        user="username", password="password", database="dbname", host="timescaledb"
+    )
+    await conn.execute(
+        "INSERT INTO heart_rate(time, rate) VALUES($1, $2)", time, data[1]
+    )
+    await conn.close()
+
+
 def callback(sender, data):
     current_time = datetime.now()
     # Assuming data format is similar to standard
     # heart rate measurement characteristic
     logger.info(f"{current_time.strftime('%Y-%m-%d %H:%M:%S')} - Heart Rate: {data[1]}")
+    asyncio.create_task(send_to_db(current_time, data))
+
 
 async def run():
+    await init_db()  # Initialize the database
+
     scanner = BleakScanner()
+
     while True:
         devices = await scanner.discover()
         tickr_device = None
