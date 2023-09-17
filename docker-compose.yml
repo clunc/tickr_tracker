@@ -1,0 +1,26 @@
+version: '3.1'
+
+services:
+  timescaledb:
+    image: timescale/timescaledb:latest-pg13
+    environment:
+      POSTGRES_PASSWORD: password
+      POSTGRES_USER: username
+      POSTGRES_DB: dbname
+    ports:
+      - "8291:5432"
+    volumes:
+      - timescaledb-data:/var/lib/postgresql/data
+      
+  app:
+    privileged: true
+    build: .
+    depends_on:
+      - timescaledb
+    devices:
+      - "/dev/bus/usb/003/002:/dev/bus/usb/003/002"
+    volumes:
+      - /var/run/dbus:/var/run/dbus
+
+volumes:
+  timescaledb-data:
