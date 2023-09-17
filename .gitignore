@@ -161,5 +161,4 @@ cython_debug/
 
 main_backup.py
 docker-compose.yml
-dockerfile
 
